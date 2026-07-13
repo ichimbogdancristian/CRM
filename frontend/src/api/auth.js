@@ -20,8 +20,18 @@ export const resetPassword = (uid, token, password, passwordConfirm) => {
   return client.post('/auth/reset-password/', { uid, token, password, password_confirm: passwordConfirm });
 };
 
-export const acceptInvite = (uid, token, password, passwordConfirm) => {
-  return client.post('/auth/accept-invite/', { uid, token, password, password_confirm: passwordConfirm });
+export const acceptInvite = (uid, token, firstName, lastName, phoneNumber, address, additionalInfo, password, passwordConfirm) => {
+  return client.post('/auth/accept-invite/', {
+    uid,
+    token,
+    first_name: firstName,
+    last_name: lastName,
+    phone_number: phoneNumber,
+    address,
+    additional_info: additionalInfo,
+    password,
+    password_confirm: passwordConfirm,
+  });
 };
 
 export const changePassword = (oldPassword, newPassword, newPasswordConfirm) => {

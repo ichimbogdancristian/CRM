@@ -40,9 +40,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
 class InviteUserSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     is_staff = serializers.BooleanField(default=False, required=False)
+    is_superuser = serializers.BooleanField(default=False, required=False)
 
     def validate_email(self, value):
         if CustomUser.objects.filter(email=value).exists():
@@ -53,6 +52,11 @@ class InviteUserSerializer(serializers.Serializer):
 class AcceptInviteSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()
+    first_name = serializers.CharField(max_length=150, required=True)
+    last_name = serializers.CharField(max_length=150, required=True)
+    phone_number = serializers.CharField(max_length=20, required=True)
+    address = serializers.CharField(max_length=255, required=True)
+    additional_info = serializers.CharField(max_length=500, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True)
     password_confirm = serializers.CharField(write_only=True)
 

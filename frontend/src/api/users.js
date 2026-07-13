@@ -4,8 +4,14 @@ export const listUsers = () => {
   return client.get('/users/');
 };
 
-export const inviteUser = (email, firstName, lastName, isStaff) => {
-  return client.post('/users/invite/', { email, first_name: firstName, last_name: lastName, is_staff: isStaff });
+export const inviteUser = (email, role) => {
+  const data = { email };
+  if (role === 'superuser') {
+    data.is_superuser = true;
+  } else if (role === 'staff') {
+    data.is_staff = true;
+  }
+  return client.post('/users/invite/', data);
 };
 
 export const updateMe = (data) => {

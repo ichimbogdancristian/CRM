@@ -55,6 +55,14 @@ export const Login = () => {
               required
               disabled={loading}
             />
+            <button
+              type="button"
+              className="forgot-password-link"
+              onClick={() => navigate('/reset-password-request')}
+              disabled={loading}
+            >
+              Forgot Password?
+            </button>
           </div>
           <button type="submit" disabled={loading}>
             {loading ? 'Logging in...' : 'Login'}

@@ -155,6 +155,11 @@ class AcceptInviteView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         user.set_password(serializer.validated_data['password'])
+        user.first_name = serializer.validated_data['first_name']
+        user.last_name = serializer.validated_data['last_name']
+        user.phone_number = serializer.validated_data['phone_number']
+        user.address = serializer.validated_data['address']
+        user.additional_info = serializer.validated_data.get('additional_info', '')
         user.is_active = True
         user.save()
         return Response({'detail': 'Account activated successfully'}, status=status.HTTP_200_OK)
@@ -204,22 +209,25 @@ class InviteUserView(APIView):
     def post(self, request):
         serializer = InviteUserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         is_staff = serializer.validated_data.get('is_staff', False)
+        is_superuser = serializer.validated_data.get('is_superuser', False)
+
         if not request.user.is_superuser:
             is_staff = False
+            is_superuser = False
 
         user = CustomUser.objects.create_user(
             username=serializer.validated_data['email'],
             email=serializer.validated_data['email'],
-            first_name=serializer.validated_data.get('first_name', ''),
-            last_name=serializer.validated_data.get('last_name', ''),
             is_staff=is_staff,
+            is_superuser=is_superuser,
             is_active=False,
         )
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
         invite_link = f"{settings.FRONTEND_BASE_URL}/accept-invite?uid={uid}&token={token}"
-        message = f"You have been invited to join. Click the link below to set your password and activate your account:\n\n{invite_link}"
+        message = f"You have been invited to join. Click the link below to complete your registration:\n\n{invite_link}"
         _send_email('Account Invitation', message, user.email)
         log_invite(request.user, user.email, request)
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
