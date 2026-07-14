@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import * as authAPI from '../api/auth';
 
 const AuthContext = createContext(null);
@@ -7,10 +7,51 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const inactivityTimerRef = useRef(null);
+  const INACTIVITY_TIMEOUT = 60 * 60 * 1000; // 1 hour in milliseconds
 
   useEffect(() => {
     checkAuth();
+    setupInactivityListener();
+    return () => clearInactivityTimer();
   }, []);
+
+  const clearInactivityTimer = () => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+  };
+
+  const resetInactivityTimer = () => {
+    clearInactivityTimer();
+    if (user) {
+      inactivityTimerRef.current = setTimeout(() => {
+        logoutDueToInactivity();
+      }, INACTIVITY_TIMEOUT);
+    }
+  };
+
+  const logoutDueToInactivity = async () => {
+    try {
+      await authAPI.logout();
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+    setUser(null);
+    window.location.href = '/login?reason=inactivity';
+  };
+
+  const setupInactivityListener = () => {
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    events.forEach(event => {
+      document.addEventListener(event, resetInactivityTimer);
+    });
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, resetInactivityTimer);
+      });
+    };
+  };
 
   const checkAuth = async () => {
     try {
@@ -19,7 +60,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
     } catch (err) {
       setUser(null);
-      setError(null);
+      console.error('Auth check failed:', err);
     } finally {
       setLoading(false);
     }
@@ -31,6 +72,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.login(email, password);
       setUser(response.data);
       setError(null);
+      resetInactivityTimer();
       return response.data;
     } catch (err) {
       setError(err.response?.data?.detail || 'Login failed');

@@ -61,6 +61,7 @@ dist/
 *.db
 *.sqlite
 *.sqlite3
+/postgres-data/
 
 # Secrets
 .env

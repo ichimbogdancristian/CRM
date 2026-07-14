@@ -17,9 +17,7 @@ export const Profile = () => {
   const [editingUserId, setEditingUserId] = useState(null);
   const [editData, setEditData] = useState({});
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteFirstName, setInviteFirstName] = useState('');
-  const [inviteLastName, setInviteLastName] = useState('');
-  const [inviteIsStaff, setInviteIsStaff] = useState(false);
+  const [inviteRole, setInviteRole] = useState('client');
   const [stats, setStats] = useState(null);
   const [auditLogs, setAuditLogs] = useState([]);
 
@@ -79,12 +77,10 @@ export const Profile = () => {
   const handleInviteUser = async (e) => {
     e.preventDefault();
     try {
-      await userAPI.inviteUser(inviteEmail, inviteFirstName, inviteLastName, inviteIsStaff);
+      await userAPI.inviteUser(inviteEmail, inviteRole);
       setMessage('User invited successfully!');
       setInviteEmail('');
-      setInviteFirstName('');
-      setInviteLastName('');
-      setInviteIsStaff(false);
+      setInviteRole('client');
       loadUsers();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
@@ -216,36 +212,18 @@ export const Profile = () => {
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="inviteFirstName">First Name</label>
-                <input
-                  id="inviteFirstName"
-                  type="text"
-                  value={inviteFirstName}
-                  onChange={(e) => setInviteFirstName(e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="inviteLastName">Last Name</label>
-                <input
-                  id="inviteLastName"
-                  type="text"
-                  value={inviteLastName}
-                  onChange={(e) => setInviteLastName(e.target.value)}
-                />
+                <label htmlFor="inviteRole">Role</label>
+                <select
+                  id="inviteRole"
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                >
+                  <option value="client">Client</option>
+                  <option value="staff">Staff</option>
+                  {isSuperuser && <option value="superuser">Superuser</option>}
+                </select>
               </div>
             </div>
-            {isSuperuser && (
-              <div className="form-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={inviteIsStaff}
-                    onChange={(e) => setInviteIsStaff(e.target.checked)}
-                  />
-                  Make Staff
-                </label>
-              </div>
-            )}
             <button type="submit">Send Invitation</button>
           </form>
 

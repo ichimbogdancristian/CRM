@@ -22,7 +22,10 @@ const processQueue = (error, token = null) => {
 client.interceptors.request.use((config) => {
   const csrftoken = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
   if (csrftoken) {
-    config.headers['X-CSRFToken'] = csrftoken.split('=')[1];
+    const tokenValue = csrftoken.split('=')[1];
+    if (tokenValue) {
+      config.headers['X-CSRFToken'] = tokenValue;
+    }
   }
   return config;
 });
@@ -49,7 +52,9 @@ client.interceptors.response.use(
         return client(originalRequest);
       } catch (err) {
         processQueue(err, null);
-        window.location.href = '/login';
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         return Promise.reject(err);
       } finally {
         refreshing = false;

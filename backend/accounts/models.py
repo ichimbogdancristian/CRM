@@ -43,6 +43,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     additional_info = models.TextField(blank=True)
     pending_email = models.EmailField(blank=True, null=True)
     date_joined = models.DateTimeField(auto_now_add=True)
+    last_activity = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     objects = CustomUserManager()
@@ -52,6 +53,23 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class LoginAttempt(models.Model):
+    email = models.EmailField()
+    ip_address = models.GenericIPAddressField()
+    success = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['email', 'timestamp']),
+            models.Index(fields=['ip_address', 'timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.email} - {self.ip_address} - {self.timestamp}"
 
 
 class AuditLog(models.Model):

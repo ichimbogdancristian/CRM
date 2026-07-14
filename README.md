@@ -1,16 +1,22 @@
 # CRM - Customer Relationship Management System
 
-A full-stack CRM application with email-based authentication, role-based access control, user management, and admin dashboard.
+A full-stack, production-ready CRM boilerplate with comprehensive security, email-based authentication, role-based access control, user management, and admin dashboard.
+
+**Perfect for:** Enterprise applications, multi-tenant systems, internal tools, and SaaS platforms.
 
 ## 🎯 Features
 
 ### Authentication & Security
-- Email/password authentication with JWT tokens in httpOnly cookies
-- CSRF protection for state-changing requests
-- Access/refresh token rotation with automatic token blacklisting
-- Password recovery via email with time-limited tokens
-- Email verification for account changes
-- Three-tier role system: Superuser, Staff, Client
+- **Email/password authentication** with JWT tokens in httpOnly cookies
+- **CSRF protection** for state-changing requests
+- **Brute force protection** - 5 failed attempts per IP = 15-minute lockout
+- **Automatic inactivity logout** - Users logged out after 1 hour of inactivity
+- **Invite expiration** - Invitations valid for 24 hours only
+- **Access/refresh token rotation** with automatic token blacklisting
+- **Password recovery** via email with time-limited tokens
+- **Email verification** for account changes
+- **Three-tier role system**: Superuser, Staff, Client
+- **Input validation** and error handling on both frontend and backend
 
 ### User Management
 - Admin-driven email invitations (no public self-registration)
@@ -176,6 +182,33 @@ DEFAULT_FROM_EMAIL=noreply@crm.local
 - `GET /api/dashboard/stats/` - Get analytics statistics (superuser only)
 - `GET /api/dashboard/audit-logs/` - Get recent activity logs (staff+ only)
 
+## 🔒 Security Features
+
+### Brute Force Protection
+- **Mechanism**: Tracks failed login attempts per email + IP address
+- **Threshold**: 5 failed attempts within 15 minutes triggers lockout
+- **Response**: Returns HTTP 429 (Too Many Requests)
+- **Reset**: Counter resets after 15 minutes of no failed attempts
+- **Storage**: Attempts logged in `LoginAttempt` model for auditing
+
+### Session Management
+- **Inactivity Timeout**: Automatic logout after 1 hour of no user activity
+- **Activity Tracking**: Mouse, keyboard, scroll, touch, and click events reset timer
+- **Frontend Detection**: Client-side inactivity tracking with server-side validation
+- **Message**: Users see "Session expired due to inactivity" on re-login
+
+### Invitation System
+- **Validity Period**: Invitations expire exactly 24 hours after creation
+- **One-time Use**: Invitations cannot be accepted twice
+- **Auto-rejection**: Expired invitations return clear error messages
+- **Role Assignment**: Admin selects user role (Client, Staff, Superuser) at invitation time
+
+### Additional Security
+- **Email Failures are Visible**: Email sending failures properly raise exceptions (no silent failures)
+- **Token Validation**: All tokens validated for expiration and integrity
+- **CSRF Protection**: Robust CSRF token extraction and validation
+- **Role-based Access Control**: Prevents privilege escalation with strict permission checks
+
 ## 🧪 Testing the System
 
 ### 1. Login
@@ -183,13 +216,25 @@ DEFAULT_FROM_EMAIL=noreply@crm.local
 - Use the superuser credentials created during setup
 - Click Login to access the dashboard
 
-### 2. User Invitations
-- Navigate to Users tab on Profile page
-- Fill the invite form with new user email
-- Check backend console for invite link
-- Use the link to complete the invitation
+### 2. Test Brute Force Protection
+- Attempt login 5 times with wrong password from same IP
+- 6th attempt returns: "Too many failed login attempts"
+- Wait 15 minutes or use different IP to reset counter
 
-### 3. Role Permissions
+### 3. User Invitations
+- Navigate to Users tab
+- Select email and role (Client, Staff, or Superuser)
+- Check backend console for invite link
+- Accept invitation within 24 hours
+- After 24 hours, invite becomes invalid
+
+### 4. Test Inactivity Logout
+- Login successfully
+- Wait 60+ minutes without moving mouse/keyboard
+- Automatic logout occurs
+- Redirected to login with inactivity message
+
+### 5. Role Permissions
 - Superuser can: manage all users, create staff/superuser accounts, view analytics
 - Staff can: manage client accounts, view limited analytics
 - Client can: only edit own profile
@@ -293,17 +338,81 @@ Before deploying to production:
 Full API documentation is available via Django REST Framework's browsable API at:
 - http://localhost:8000/api/
 
+## 🎨 Customization Guide
+
+### Adding Custom Fields to User Model
+1. Edit `accounts/models.py` - Add new fields to `CustomUser`
+2. Create migration: `python manage.py makemigrations`
+3. Update serializers in `accounts/serializers.py`
+4. Update frontend forms in `frontend/src/pages/`
+
+### Changing Security Timeouts
+In `backend/accounts/views.py`:
+- **Inactivity timeout**: Change `one_hour_ago` to desired duration
+- **Brute force threshold**: Change `failed_attempts >= 5` to new limit
+- **Brute force window**: Modify `fifteen_minutes_ago` timedelta
+
+In `frontend/src/context/AuthContext.jsx`:
+- **Inactivity timeout**: Change `INACTIVITY_TIMEOUT = 60 * 60 * 1000`
+
+### Invite Expiration
+In `backend/accounts/serializers.py`:
+- **Change to 7 days**: `timedelta(hours=24)` → `timedelta(days=7)`
+- **Change to 1 hour**: `timedelta(hours=24)` → `timedelta(hours=1)`
+
+### Email Configuration
+1. Update `backend/.env`:
+   ```
+   EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_HOST_USER=your-email@gmail.com
+   EMAIL_HOST_PASSWORD=your-app-password
+   ```
+
+## 🚀 Deployment
+
+### Docker (Recommended)
+Create `Dockerfile`:
+```dockerfile
+FROM python:3.11
+WORKDIR /app
+COPY backend/requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 8000
+CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000"]
+```
+
+### Heroku
+```bash
+heroku create your-app-name
+heroku addons:create heroku-postgresql:standard-0
+git push heroku main
+heroku run python manage.py migrate
+heroku run python manage.py createsuperuser
+```
+
+### DigitalOcean / AWS / GCP
+See deployment documentation in `DEPLOYMENT.md`
+
 ## 🤝 Contributing
 
-1. Create a new branch for features
-2. Follow existing code style
-3. Test thoroughly before committing
-4. Write clear commit messages
+This is a boilerplate project. Feel free to:
+1. Fork and customize for your needs
+2. Report issues or suggest improvements
+3. Submit pull requests for enhancements
 
 ## 📄 License
 
-This project is proprietary and for internal use only.
+MIT License - Feel free to use this boilerplate for commercial and private projects.
 
-## 👥 Support
+## 🙌 Credits
 
-For issues or questions, contact the development team.
+Built with Django, Django REST Framework, React, and Vite.
+
+## 📞 Support
+
+- Check troubleshooting section above
+- Review Django documentation: https://docs.djangoproject.com/
+- Review React documentation: https://react.dev/

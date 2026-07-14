@@ -4,6 +4,8 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_str, force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.auth.password_validation import validate_password
+from django.utils import timezone
+from datetime import timedelta
 from .models import CustomUser, AuditLog
 from .tokens import make_email_change_token, read_email_change_token
 
@@ -66,6 +68,14 @@ class AcceptInviteSerializer(serializers.Serializer):
             user = CustomUser.objects.get(pk=user_id)
         except (TypeError, ValueError, CustomUser.DoesNotExist):
             raise serializers.ValidationError("Invalid user ID.")
+
+        if user.is_active:
+            raise serializers.ValidationError("This account has already been activated.")
+
+        now = timezone.now()
+        invite_expiry = user.date_joined + timedelta(hours=24)
+        if now > invite_expiry:
+            raise serializers.ValidationError("Invite has expired. Please request a new invitation.")
 
         if not default_token_generator.check_token(user, attrs['token']):
             raise serializers.ValidationError("Invalid or expired token.")
