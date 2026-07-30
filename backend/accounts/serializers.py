@@ -15,26 +15,51 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        email = attrs.get('email')
-        password = attrs.get('password')
-        user = authenticate(request=self.context.get('request'), username=email, password=password)
+        email = attrs.get("email")
+        password = attrs.get("password")
+        user = authenticate(
+            request=self.context.get("request"), username=email, password=password
+        )
         if not user or not user.is_active:
-            raise serializers.ValidationError('Invalid credentials')
-        attrs['user'] = user
+            raise serializers.ValidationError("Invalid credentials")
+        attrs["user"] = user
         return attrs
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ('id', 'email', 'username', 'first_name', 'last_name', 'phone_number', 'address', 'additional_info', 'is_staff', 'is_superuser', 'is_active', 'date_joined')
-        read_only_fields = ('id', 'date_joined')
+        fields = (
+            "id",
+            "email",
+            "username",
+            "first_name",
+            "last_name",
+            "phone_number",
+            "address",
+            "additional_info",
+            "is_staff",
+            "is_superuser",
+            "is_active",
+            "date_joined",
+        )
+        read_only_fields = ("id", "date_joined")
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ('first_name', 'last_name', 'phone_number', 'address', 'additional_info', 'email', 'is_staff', 'is_superuser', 'is_active')
+        fields = (
+            "first_name",
+            "last_name",
+            "phone_number",
+            "address",
+            "additional_info",
+            "email",
+            "is_staff",
+            "is_superuser",
+            "is_active",
+        )
 
     def to_representation(self, instance):
         return UserSerializer(instance).data
@@ -58,37 +83,43 @@ class AcceptInviteSerializer(serializers.Serializer):
     last_name = serializers.CharField(max_length=150, required=True)
     phone_number = serializers.CharField(max_length=20, required=True)
     address = serializers.CharField(max_length=255, required=True)
-    additional_info = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    additional_info = serializers.CharField(
+        max_length=500, required=False, allow_blank=True
+    )
     password = serializers.CharField(write_only=True)
     password_confirm = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
         try:
-            user_id = force_str(urlsafe_base64_decode(attrs['uid']))
+            user_id = force_str(urlsafe_base64_decode(attrs["uid"]))
             user = CustomUser.objects.get(pk=user_id)
         except (TypeError, ValueError, CustomUser.DoesNotExist):
             raise serializers.ValidationError("Invalid user ID.")
 
         if user.is_active:
-            raise serializers.ValidationError("This account has already been activated.")
+            raise serializers.ValidationError(
+                "This account has already been activated."
+            )
 
         now = timezone.now()
         invite_expiry = user.date_joined + timedelta(hours=24)
         if now > invite_expiry:
-            raise serializers.ValidationError("Invite has expired. Please request a new invitation.")
+            raise serializers.ValidationError(
+                "Invite has expired. Please request a new invitation."
+            )
 
-        if not default_token_generator.check_token(user, attrs['token']):
+        if not default_token_generator.check_token(user, attrs["token"]):
             raise serializers.ValidationError("Invalid or expired token.")
 
-        if attrs['password'] != attrs['password_confirm']:
+        if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError("Passwords do not match.")
 
         try:
-            validate_password(attrs['password'], user)
+            validate_password(attrs["password"], user)
         except serializers.ValidationError as e:
             raise serializers.ValidationError({"password": e.detail})
 
-        attrs['user'] = user
+        attrs["user"] = user
         return attrs
 
 
@@ -104,23 +135,23 @@ class ResetPasswordSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         try:
-            user_id = force_str(urlsafe_base64_decode(attrs['uid']))
+            user_id = force_str(urlsafe_base64_decode(attrs["uid"]))
             user = CustomUser.objects.get(pk=user_id)
         except (TypeError, ValueError, CustomUser.DoesNotExist):
             raise serializers.ValidationError("Invalid user ID.")
 
-        if not default_token_generator.check_token(user, attrs['token']):
+        if not default_token_generator.check_token(user, attrs["token"]):
             raise serializers.ValidationError("Invalid or expired token.")
 
-        if attrs['password'] != attrs['password_confirm']:
+        if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError("Passwords do not match.")
 
         try:
-            validate_password(attrs['password'], user)
+            validate_password(attrs["password"], user)
         except serializers.ValidationError as e:
             raise serializers.ValidationError({"password": e.detail})
 
-        attrs['user'] = user
+        attrs["user"] = user
         return attrs
 
 
@@ -130,15 +161,15 @@ class ChangePasswordSerializer(serializers.Serializer):
     new_password_confirm = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        user = self.context['request'].user
-        if not user.check_password(attrs['old_password']):
+        user = self.context["request"].user
+        if not user.check_password(attrs["old_password"]):
             raise serializers.ValidationError({"old_password": "Incorrect password."})
 
-        if attrs['new_password'] != attrs['new_password_confirm']:
+        if attrs["new_password"] != attrs["new_password_confirm"]:
             raise serializers.ValidationError("New passwords do not match.")
 
         try:
-            validate_password(attrs['new_password'], user)
+            validate_password(attrs["new_password"], user)
         except serializers.ValidationError as e:
             raise serializers.ValidationError({"new_password": e.detail})
 
@@ -157,12 +188,12 @@ class ConfirmEmailChangeSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         try:
-            data = read_email_change_token(attrs['token'])
-            user = CustomUser.objects.get(pk=data['user_id'])
-            if user.pending_email != data['new_email']:
+            data = read_email_change_token(attrs["token"])
+            user = CustomUser.objects.get(pk=data["user_id"])
+            if user.pending_email != data["new_email"]:
                 raise serializers.ValidationError("Email mismatch or token expired.")
-            attrs['user'] = user
-            attrs['new_email'] = data['new_email']
+            attrs["user"] = user
+            attrs["new_email"] = data["new_email"]
         except CustomUser.DoesNotExist:
             raise serializers.ValidationError("Invalid token.")
         except Exception:
@@ -171,13 +202,23 @@ class ConfirmEmailChangeSerializer(serializers.Serializer):
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
-    actor_email = serializers.CharField(source='actor.email', read_only=True)
-    target_user_email = serializers.CharField(source='target_user.email', read_only=True)
+    actor_email = serializers.CharField(source="actor.email", read_only=True)
+    target_user_email = serializers.CharField(
+        source="target_user.email", read_only=True
+    )
 
     class Meta:
         model = AuditLog
-        fields = ('id', 'actor_email', 'target_user_email', 'action', 'description', 'timestamp', 'ip_address')
-        read_only_fields = ('id', 'timestamp')
+        fields = (
+            "id",
+            "actor_email",
+            "target_user_email",
+            "action",
+            "description",
+            "timestamp",
+            "ip_address",
+        )
+        read_only_fields = ("id", "timestamp")
 
 
 class DashboardStatsSerializer(serializers.Serializer):

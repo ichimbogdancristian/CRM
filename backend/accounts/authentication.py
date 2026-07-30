@@ -15,10 +15,11 @@ class CookieJWTAuthentication(JWTAuthentication):
         return (user, validated_token)
 
     def enforce_csrf(self, request):
-        if request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):
+        if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
             return
         check = CsrfViewMiddleware(lambda r: None)
         reason = check.process_view(request, None, (), {})
         if reason:
             from rest_framework import exceptions
-            raise exceptions.PermissionDenied(f'CSRF Failed: {reason}')
+
+            raise exceptions.PermissionDenied(f"CSRF Failed: {reason}")
